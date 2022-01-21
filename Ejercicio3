@@ -1,1 +1,81 @@
-Aún no está
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define READ  0
+#define WRITE 1
+
+int numeroAleatorio()
+{
+  srand(time(NULL));
+  int aleatorio = rand() % 1000 + 1;
+  return aleatorio;
+}
+
+void comparacion(int numero)
+{
+  if (numero < 500)
+  {
+    printf("El número al azar %d es menor que 500.\n", numero);
+  } else
+  {
+    printf("El número al azar %d es mayor o igual que 500.\n", numero);
+  }
+}
+
+int main() {
+
+  pid_t pid;
+  int  fd[2];
+
+  if (pipe(fd) == -1) 
+  {
+	  perror("Creating pipe");
+	  exit(EXIT_FAILURE);
+  }
+
+  pid = fork();
+
+  if (pid == 0)
+  {
+	  // The child process.
+	  // Close the pipe write descriptor.
+	  close(fd[WRITE]);
+    
+	  // Redirect STDIN to read from the pipe.
+	  dup2(fd[READ], STDIN_FILENO);
+
+    // Crea la variable para guardar el número. 
+    // Tamaño 3 porque tiene 3 cifras, pero puede ser un número mayor sin problemas.
+    char a[3];
+
+    // Lee el número en el archivo.
+    read(fd[READ], a, 3);
+
+    // Compara el número.
+    comparacion(atoi(a));
+
+  } else if (pid == -1)
+  {
+	  perror("fork() failed)");
+	  exit(EXIT_FAILURE);
+
+  } else
+  {
+	  // The parent process will execute ls.
+	  // Close the pipe read descriptor.
+	  close(fd[READ]);
+	  
+    // Redirect STDOUT to write to the pipe.
+	  dup2(fd[WRITE], STDOUT_FILENO);
+
+	  // Escribe el número en el archivo.
+    printf("%d", numeroAleatorio());
+
+  }
+
+}
